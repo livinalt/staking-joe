@@ -10,80 +10,81 @@ This is a contract that allows you to stake
 
 contract StakingJoe{
 
-    bool stakingClosed;
-    bool hasStaked;
-    uint256 stakingDuration; // this is the storage duration 
-    address owner;
-    address tokenAddress; // this is the token we are depositing    
-    
+   address public owner;
+    address public tokenAddress; // The token to be staked
+    bool public stakingClosed; 
 
-    mapping(address => uint256) balances; // this hods all the balance of the stakes
-    mapping(address => bool) stakingActive; // this hods all the balance of the stakes
-    mapping(address => bool) contractStakingClosed; // this hods all the balance of the stakes
-
-
-    constructor(){
-        owner = msg.sender;
+    struct StakerAccount {
+        uint256 stakingStartTime; // The time when the user initiated staking
+        uint256 stakedAmount;     // Amount of tokens staked by the staker
+        uint256 reward;           // Reward earned by the staker
     }
 
-    function stakedJoe(uint256 amount) external {
-        require( !hasStaked, "You have already staked");
-        require(amount > 0, "you cannot send zero");
+    mapping(address => StakerAccount) public stakers;
+    mapping(address => bool) public hasStaked; // Checks if a staker has staked
 
-        uint256 _userBalance = IERC20(tokenAddress).balanceOf(msg.sender);
+    constructor(address _tokenAddress) {
+        owner = msg.sender;
+        tokenAddress = _tokenAddress;
+    }
 
-        require(amount > _userBalance, "insufficient tokens");
+    modifier onlyOwner() {
+        require(owner == msg.sender, "You are not the owner");
+        _;
+    }
 
-        IERC20(tokenAddress).transfer(address(this), amount);        
-        balances[msg.sender] += amount;
-        hasStaked = true;
+    function stakeJoe(uint256 amount) external returns (address, uint256, bool) {
+        require(!stakingClosed, "The staking period is closed");
+        require(amount > 0, "You can't stake zero amount");
+
+        uint256 userBalance = IERC20(tokenAddress).balanceOf(msg.sender);
+        require(amount <= userBalance, "Insufficient tokens");
+
+        IERC20(tokenAddress).transferFrom(msg.sender, address(this), amount);
+
+        stakers[msg.sender].stakingStartTime = block.timestamp;
+        stakers[msg.sender].stakedAmount += amount;
+        stakers[msg.sender].reward = 0; 
+        hasStaked[msg.sender] = true;
+
+        return (msg.sender, block.timestamp, true);
     }
 
     function unStakeJoe() external {
-        require( hasStaked, "You don't have an active stake");
-        require(block.timestamp>stakingDuration, "The staking duration is not over yet");
+        require(hasStaked[msg.sender], "You don't have an active stake");
 
-        uint256 yield = (10 * 1e18) / 100;
-        uint256 reward = yield * stakingDuration;
-        
-           uint256 _stakedReward = balances[msg.sender]* reward;
-           uint256 _stakedBalance = balances[msg.sender] + _stakedReward;
+        StakerAccount memory staker = stakers[msg.sender]; // creating the staker instance
+        require(block.timestamp >= staker.stakingStartTime + 1 days, "The staking period has not ended");
 
-           IERC20(tokenAddress).transfer(msg.sender, _stakedBalance);
-           balances[msg.sender] -= _stakedBalance;
+        uint256 stakedAmount = staker.stakedAmount;
+        uint256 reward = calculateReward(block.timestamp - staker.stakingStartTime);
 
-           hasStaked;
+        staker.stakedAmount = 0;
+        staker.reward = 0;
+        hasStaked[msg.sender] = false;
+
+        // staked tokens + reward is transfered back to the user
+        IERC20(tokenAddress).transfer(msg.sender, stakedAmount + reward);
     }
 
-    function calculateReward() external view returns(uint256){
+    function calculateReward(uint256 duration) public pure returns (uint256) {
         uint256 yield = (10 * 1e18) / 100;
-        uint256 reward = yield * stakingDuration;
+        uint256 reward = yield * (duration / 1 days); 
         return reward;
     }
 
-    function checkStakingStatus() external view returns(bool){
-        return stakingActive[msg.sender];
+    function checkBalance() external view returns (uint256) {
+        return stakers[msg.sender].stakedAmount;
     }
 
-    function checkBalanace() external view returns(uint256){
-        return balances[msg.sender];
+    function checkContractBalance() external view returns (uint256) {
+        return IERC20(tokenAddress).balanceOf(address(this));
     }
 
-    function checkContractBalance() external view returns(uint256){
-        return balances[address(this)];
+    function toggleStaking() external onlyOwner returns (bool, uint256) {
+        stakingClosed = !stakingClosed;
+        return (stakingClosed, block.timestamp);
     }
-    
-    // function isStakingOpen(bool isOpen) external view returns(uint256){
-    //     if(isOpen){
-            
-
-    //     }
-    // }
-    
-    // function toggleStaking() external view returns(bool _isOpen){
-    //     contractStakingClosed = _isOpen;
-    // }
-
 
 
 }
