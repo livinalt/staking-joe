@@ -3,15 +3,11 @@ pragma solidity 0.8.20;
 
 import "./IERC20.sol";
 
-/* 
-This is a contract that allows you to stake
-
- */
 
 contract StakingJoe{
 
    address public owner;
-    address public tokenAddress; // The token to be staked
+    address public tokenAddress; // This is the Staker Joe token to be staked
     bool public stakingClosed; 
 
     struct StakerAccount {
@@ -53,18 +49,19 @@ contract StakingJoe{
     function unStakeJoe() external {
         require(hasStaked[msg.sender], "You don't have an active stake");
 
-        StakerAccount memory staker = stakers[msg.sender]; // creating the staker instance
+        StakerAccount memory staker = stakers[msg.sender];
         require(block.timestamp >= staker.stakingStartTime + 1 days, "The staking period has not ended");
 
         uint256 stakedAmount = staker.stakedAmount;
         uint256 reward = calculateReward(block.timestamp - staker.stakingStartTime);
+        uint256 totalReturn = stakedAmount + reward;
 
         staker.stakedAmount = 0;
         staker.reward = 0;
         hasStaked[msg.sender] = false;
 
-        // staked tokens + reward is transfered back to the user
-        IERC20(tokenAddress).transfer(msg.sender, stakedAmount + reward);
+        // Transfer the staked tokens and the reward back to the user
+        IERC20(tokenAddress).transfer(msg.sender, totalReturn);
     }
 
     function calculateReward(uint256 duration) public pure returns (uint256) {
