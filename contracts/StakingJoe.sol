@@ -17,8 +17,8 @@ contract StakingJoe{
         uint256 reward;           // Reward earned by the staker
     }
 
-    event TokenStaked(address indexed msg.sender, uint256 indexed amount);
-    event TokenUnstaked(address indexed msg.sender, uint256 indexed totalReturn);
+    event TokenStaked(address indexed staker, uint256 indexed amount);
+    event TokenUnstaked(address indexed staker, uint256 indexed totalReturn);
 
     mapping(address => StakerAccount) public stakers;
     mapping(address => bool) public hasStaked; // Checks if a staker has staked
@@ -68,7 +68,7 @@ contract StakingJoe{
         // Transfer the staked tokens and the reward back to the user
         IERC20(tokenAddress).transfer(msg.sender, totalReturn);
 
-        event TokenUnstaked(msg.sender, totalReturn);
+        emit TokenUnstaked(msg.sender, totalReturn);
     }
 
     function calculateReward(uint256 duration) public pure returns (uint256) {
