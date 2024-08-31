@@ -5,6 +5,7 @@ import "./IERC20.sol";
 
 
 contract StakingJoe{
+    
 
    address public owner;
     address public tokenAddress; // This is the Staker Joe token to be staked
@@ -15,6 +16,9 @@ contract StakingJoe{
         uint256 stakedAmount;     // Amount of tokens staked by the staker
         uint256 reward;           // Reward earned by the staker
     }
+
+    event TokenStaked(address indexed msg.sender, uint256 indexed amount);
+    event TokenUnstaked(address indexed msg.sender, uint256 indexed totalReturn);
 
     mapping(address => StakerAccount) public stakers;
     mapping(address => bool) public hasStaked; // Checks if a staker has staked
@@ -44,6 +48,7 @@ contract StakingJoe{
         hasStaked[msg.sender] = true;
 
         return (msg.sender, block.timestamp, true);
+        emit TokenStaked(msg.sender, amount);
     }
 
     function unStakeJoe() external {
@@ -62,6 +67,8 @@ contract StakingJoe{
 
         // Transfer the staked tokens and the reward back to the user
         IERC20(tokenAddress).transfer(msg.sender, totalReturn);
+
+        event TokenUnstaked(msg.sender, totalReturn);
     }
 
     function calculateReward(uint256 duration) public pure returns (uint256) {
