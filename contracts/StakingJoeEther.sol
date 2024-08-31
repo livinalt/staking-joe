@@ -11,14 +11,35 @@ contract StakingJoeEther {
         uint256 reward;           // Reward in ether earned by the staker
     }
 
+    event TokenStaked(address indexed staker, uint256 indexed amount);
+    event TokenUnstaked(address indexed staker, uint256 indexed totalReturn);
+
+    mapping(address => StakerAccount) public stakers;
+    mapping(address => bool) public hasStaked; // Checks if a staker has staked
+
     constructor() {
-        
+        owner = msg.sender;
     }
 
-    function stakeJoeEther() external payable {
-
-
+    modifier onlyOwner() {
+        require(owner == msg.sender, "You are not the owner");
+        _;
     }
+
+    function stakeJoe() external payable returns (address, uint256, bool) {
+        require(!stakingClosed, "The staking period is closed");
+        require(msg.value > 0, "You can't stake zero amount");
+
+        stakers[msg.sender].stakingStartTime = block.timestamp;
+        stakers[msg.sender].stakedAmount += msg.value;
+        stakers[msg.sender].reward = 0; 
+        hasStaked[msg.sender] = true;
+
+        return (msg.sender, block.timestamp, true);
+
+        emit TokenStaked(msg.sender, msg.value);
+    }
+
 
     function unStakeJoe() external {
     
@@ -28,16 +49,17 @@ contract StakingJoeEther {
 
     }
 
-    function checkBalance() external view returns (uint256){
-
+    function checkBalance() external view returns (uint256) {
+        return stakers[msg.sender].stakedAmount;
     }
 
     function checkContractBalance() external view returns (uint256) {
-
+        return address(this).balance;
     }
 
-    function toggleStaking() external onlyOwner returns (bool, uint256){
-
+    function toggleStaking() external onlyOwner returns (bool, uint256) {
+        stakingClosed = !stakingClosed;
+        return (stakingClosed, block.timestamp);
     }
 
     // This implements a fallback to receive Ether
